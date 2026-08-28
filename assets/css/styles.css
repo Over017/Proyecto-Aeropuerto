@@ -1,0 +1,404 @@
+/* =========================================================================
+   AeroAndes - Panel Operacional
+   Estilo: minimalista tipo apps de Apple.
+   Reglas de la direccion de diseno:
+   - Jerarquia por tipografia y espacio, no por bordes ni cajas.
+   - Un solo color de acento (azul) + rojo reservado para atraso/cancelacion.
+   - Sombras muy suaves, radios sutiles, transiciones discretas.
+   ========================================================================= */
+
+/* ---------- Tokens (modo claro) ---------- */
+:root {
+  --bg:            #fbfbfd;
+  --superficie:    #ffffff;
+  --superficie-2:  #f5f5f7;
+  --texto:         #1d1d1f;
+  --texto-2:       #6e6e73;
+  --texto-3:       #a1a1a6;
+  --linea:         rgba(0, 0, 0, 0.06);
+  --acento:        #0071e3;
+  --acento-suave:  rgba(0, 113, 227, 0.10);
+  --alerta:        #d70015;
+  --alerta-suave:  rgba(215, 0, 21, 0.09);
+  --sombra:        0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+
+  --radio:         14px;
+  --radio-sm:      9px;
+  --transicion:    240ms cubic-bezier(0.32, 0.72, 0, 1);
+
+  --fuente: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+            "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---------- Tokens (modo oscuro) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:           #000000;
+    --superficie:   #1c1c1e;
+    --superficie-2: #2c2c2e;
+    --texto:        #f5f5f7;
+    --texto-2:      #98989d;
+    --texto-3:      #636366;
+    --linea:        rgba(255, 255, 255, 0.08);
+    --acento:       #0a84ff;
+    --acento-suave: rgba(10, 132, 255, 0.16);
+    --alerta:       #ff453a;
+    --alerta-suave: rgba(255, 69, 58, 0.16);
+    --sombra:       0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--texto);
+  font-family: var(--fuente);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 44px;
+}
+
+.header__titulo {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.header__sub {
+  margin: 4px 0 0;
+  color: var(--texto-2);
+  font-size: 15px;
+}
+
+.header__reloj {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.reloj { text-align: right; }
+
+.reloj__hora {
+  display: block;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  /* Ancho fijo por digito: evita que el reloj salte al avanzar */
+  font-variant-numeric: tabular-nums;
+}
+
+.reloj__etiqueta {
+  display: block;
+  font-size: 12px;
+  color: var(--texto-3);
+}
+
+/* Segmented control, al estilo iOS */
+.velocidad {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--superficie-2);
+  border-radius: var(--radio-sm);
+}
+
+.velocidad__btn {
+  border: 0;
+  background: transparent;
+  color: var(--texto-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background var(--transicion), color var(--transicion);
+}
+
+.velocidad__btn:hover { color: var(--texto); }
+
+.velocidad__btn[aria-pressed="true"] {
+  background: var(--superficie);
+  color: var(--texto);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
+}
+
+/* ---------- KPIs ---------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 36px;
+}
+
+.kpi {
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 20px 22px;
+}
+
+.kpi__valor {
+  display: block;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transicion);
+}
+
+/* El KPI de atrasados solo se pinta de rojo cuando efectivamente hay atrasos */
+.kpi__valor--alerta.esta-activo { color: var(--alerta); }
+
+.kpi__label {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+/* ---------- Controles ---------- */
+.controles {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.buscador {
+  flex: 1 1 260px;
+  max-width: 320px;
+  border: 0;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  outline: none;
+  transition: box-shadow var(--transicion);
+}
+
+.buscador::placeholder { color: var(--texto-3); }
+
+.buscador:focus {
+  box-shadow: var(--sombra), 0 0 0 3px var(--acento-suave);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  border: 0;
+  background: transparent;
+  color: var(--texto-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background var(--transicion), color var(--transicion);
+}
+
+.chip:hover { background: var(--superficie-2); color: var(--texto); }
+
+.chip[aria-pressed="true"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+/* ---------- Tablero ---------- */
+.tablero {
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
+
+/* Grilla compartida entre encabezado y filas para que las columnas calcen */
+.tablero__encabezado,
+.fila {
+  display: grid;
+  grid-template-columns: 96px minmax(180px, 1.4fr) 108px 108px 72px 150px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 24px;
+}
+
+.tablero__encabezado {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+  padding-top: 18px;
+  padding-bottom: 10px;
+}
+
+.fila {
+  border-top: 1px solid var(--linea);
+  transition: background var(--transicion), opacity var(--transicion);
+}
+
+.fila:hover { background: var(--superficie-2); }
+
+/* Destello suave cuando un vuelo cambia de estado (la clase se quita desde JS) */
+.fila--cambio { animation: destello 1600ms ease-out; }
+
+@keyframes destello {
+  0%   { background: var(--acento-suave); }
+  100% { background: transparent; }
+}
+
+.fila--atrasada.fila--cambio { animation: destello-alerta 1600ms ease-out; }
+
+@keyframes destello-alerta {
+  0%   { background: var(--alerta-suave); }
+  100% { background: transparent; }
+}
+
+.fila--cancelada { opacity: 0.5; }
+
+.fila__codigo {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila__equipo {
+  display: block;
+  font-size: 12px;
+  color: var(--texto-3);
+  font-weight: 400;
+}
+
+.fila__ruta { color: var(--texto); }
+
+.fila__ruta-detalle {
+  display: block;
+  font-size: 12px;
+  color: var(--texto-3);
+}
+
+.fila__hora { font-variant-numeric: tabular-nums; }
+
+/* Hora original tachada: se muestra bajo la hora reprogramada */
+.fila__hora-original {
+  display: block;
+  font-size: 12px;
+  color: var(--texto-3);
+  text-decoration: line-through;
+}
+
+.fila__hora--atrasada { color: var(--alerta); }
+
+.fila__puerta { color: var(--texto-2); font-variant-numeric: tabular-nums; }
+
+/* ---------- Estados ---------- */
+.estado { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+
+.estado__pill {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: var(--superficie-2);
+  color: var(--texto-2);
+  transition: background var(--transicion), color var(--transicion);
+}
+
+/* Programado y Aterrizado quedan en neutro: no compiten por atencion */
+.estado__pill--embarcando,
+.estado__pill--en-camino {
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+
+/* Rojo: exclusivo de atraso y cancelacion */
+.estado__pill--atrasado,
+.estado__pill--cancelado {
+  background: var(--alerta-suave);
+  color: var(--alerta);
+}
+
+.estado__detalle {
+  font-size: 11.5px;
+  color: var(--texto-3);
+  padding-left: 2px;
+}
+
+.tablero__vacio {
+  margin: 0;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--texto-3);
+  font-size: 14px;
+}
+
+/* ---------- Pie ---------- */
+.pie {
+  margin-top: 28px;
+  text-align: center;
+  color: var(--texto-3);
+  font-size: 12.5px;
+}
+
+.pie p { margin: 0; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .app { padding: 32px 16px 56px; }
+
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+
+  .tablero__encabezado { display: none; }
+
+  /* En pantalla chica la fila deja de ser tabla y pasa a ser ficha */
+  .fila {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "codigo estado"
+      "ruta   estado"
+      "horas  puerta";
+    row-gap: 6px;
+  }
+
+  .fila__codigo  { grid-area: codigo; }
+  .fila__ruta    { grid-area: ruta; }
+  .fila__salida  { grid-area: horas; }
+  .fila__llegada { display: none; }
+  .fila__puerta  { grid-area: puerta; text-align: right; }
+  .estado        { grid-area: estado; align-items: flex-end; }
+}
+
+/* Respeta la preferencia de menos movimiento del sistema */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

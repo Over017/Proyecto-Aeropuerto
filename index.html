@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AeroAndes · Panel Operacional</title>
+  <meta name="description" content="Maqueta del panel operacional de vuelos (datos simulados)." />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <!--
+    ESTRUCTURA DE LA PANTALLA
+    1. header  → identidad + reloj simulado + control de velocidad de la demo
+    2. kpis    → resumen del estado de la operación
+    3. filtros → búsqueda + chips por estado
+    4. tablero → listado de vuelos (se renderiza desde JS, ver assets/js/ui.js)
+  -->
+  <div class="app">
+
+    <header class="header">
+      <div class="header__marca">
+        <h1 class="header__titulo">Panel Operacional</h1>
+        <p class="header__sub">AeroAndes · Vuelos del día</p>
+      </div>
+
+      <div class="header__reloj">
+        <div class="reloj">
+          <span class="reloj__hora" id="reloj-hora">--:--</span>
+          <span class="reloj__etiqueta">hora simulada</span>
+        </div>
+        <!-- Control solo para la demo: acelera el tiempo para que los estados cambien en vivo -->
+        <div class="velocidad" role="group" aria-label="Velocidad de la simulación">
+          <button class="velocidad__btn" data-velocidad="1">1×</button>
+          <button class="velocidad__btn" data-velocidad="60">60×</button>
+          <button class="velocidad__btn" data-velocidad="300">300×</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="kpis" aria-label="Resumen de la operación">
+      <div class="kpi">
+        <span class="kpi__valor" id="kpi-total">0</span>
+        <span class="kpi__label">Vuelos</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__valor" id="kpi-aire">0</span>
+        <span class="kpi__label">En camino</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__valor kpi__valor--alerta" id="kpi-atrasados">0</span>
+        <span class="kpi__label">Atrasados</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__valor" id="kpi-cancelados">0</span>
+        <span class="kpi__label">Cancelados</span>
+      </div>
+    </section>
+
+    <section class="controles">
+      <input
+        class="buscador"
+        id="buscador"
+        type="search"
+        placeholder="Buscar vuelo, origen o destino"
+        aria-label="Buscar vuelo, origen o destino" />
+      <div class="chips" id="chips" role="group" aria-label="Filtrar por estado"></div>
+    </section>
+
+    <main class="tablero">
+      <div class="tablero__encabezado" aria-hidden="true">
+        <span>Vuelo</span>
+        <span>Ruta</span>
+        <span>Salida</span>
+        <span>Llegada est.</span>
+        <span>Puerta</span>
+        <span>Estado</span>
+      </div>
+      <div class="tablero__cuerpo" id="lista-vuelos"></div>
+      <p class="tablero__vacio" id="tablero-vacio" hidden>No hay vuelos que coincidan con el filtro.</p>
+    </main>
+
+    <footer class="pie">
+      <p>Maqueta con datos simulados · Caso 12 — Gestión operacional de línea aérea</p>
+    </footer>
+
+  </div>
+
+  <!-- Orden de carga: datos → lógica de simulación → render → arranque -->
+  <script src="assets/js/mock-flights.js"></script>
+  <script src="assets/js/simulator.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
