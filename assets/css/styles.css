@@ -7,20 +7,48 @@
    - Sombras muy suaves, radios sutiles, transiciones discretas.
    ========================================================================= */
 
-/* ---------- Tokens (modo claro) ---------- */
+/* ---------- Paleta base ----------
+   Degradado de azules definido para el proyecto. Estos son los colores
+   "crudos": abajo se mapean a roles (fondo, texto, acento). Se declaran una
+   sola vez para poder cambiar la paleta sin perseguir valores sueltos.
+   ------------------------------------------------------------------------- */
 :root {
-  --bg:            #fbfbfd;
+  --deep-twilight:    #03045e;
+  --french-blue:      #023e8a;
+  --bright-teal-blue: #0077b6;
+  --blue-green:       #0096c7;
+  --turquoise-surf:   #00b4d8;
+  --sky-aqua:         #48cae4;
+  --frosted-blue:     #90e0ef;
+  --frosted-blue-2:   #ade8f4;
+  --light-cyan:       #caf0f8;
+}
+
+/* ---------- Roles (modo claro) ----------
+   Fondo blanco con tinte cian, texto en el azul mas oscuro, acento en el azul
+   intermedio. El rojo no sale de la paleta a proposito: es el unico color que
+   no es azul, para que siga leyendose como alerta.
+   ------------------------------------------------------------------------- */
+:root {
+  --bg:            #f4fafd;
   --superficie:    #ffffff;
-  --superficie-2:  #f5f5f7;
-  --texto:         #1d1d1f;
-  --texto-2:       #6e6e73;
-  --texto-3:       #a1a1a6;
-  --linea:         rgba(0, 0, 0, 0.06);
-  --acento:        #0071e3;
-  --acento-suave:  rgba(0, 113, 227, 0.10);
+  --superficie-2:  #e4f2f9;
+  --texto:         var(--deep-twilight);
+  --texto-2:       #40548f;
+  --texto-3:       #6d7fae;
+  --linea:         rgba(3, 4, 94, 0.10);
+
+  --acento:        var(--bright-teal-blue);
+  --acento-fuerte: var(--french-blue);   /* hover del acento */
+  --acento-suave:  rgba(0, 119, 182, 0.10);
+  /* Color del texto que va ENCIMA del acento. Cambia con el tema: en oscuro el
+     acento es celeste claro y el blanco encima seria ilegible. */
+  --sobre-acento:  #ffffff;
+
   --alerta:        #d70015;
-  --alerta-suave:  rgba(215, 0, 21, 0.09);
-  --sombra:        0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --alerta-suave:  rgba(215, 0, 21, 0.08);
+
+  --sombra:        0 1px 2px rgba(3, 4, 94, 0.06), 0 8px 24px rgba(3, 4, 94, 0.07);
 
   --radio:         14px;
   --radio-sm:      9px;
@@ -30,21 +58,29 @@
             "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* ---------- Tokens (modo oscuro) ---------- */
+/* ---------- Roles (modo oscuro) ----------
+   Se invierte: el azul mas oscuro pasa a ser el fondo y los cianes claros, el
+   texto y el acento.
+   ------------------------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:           #000000;
-    --superficie:   #1c1c1e;
-    --superficie-2: #2c2c2e;
-    --texto:        #f5f5f7;
-    --texto-2:      #98989d;
-    --texto-3:      #636366;
-    --linea:        rgba(255, 255, 255, 0.08);
-    --acento:       #0a84ff;
-    --acento-suave: rgba(10, 132, 255, 0.16);
-    --alerta:       #ff453a;
-    --alerta-suave: rgba(255, 69, 58, 0.16);
-    --sombra:       0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --bg:            #01022e;
+    --superficie:    #05095a;
+    --superficie-2:  #0d1a75;
+    --texto:         var(--light-cyan);
+    --texto-2:       #90c2de;
+    --texto-3:       #6389b4;
+    --linea:         rgba(173, 232, 244, 0.14);
+
+    --acento:        var(--sky-aqua);
+    --acento-fuerte: var(--frosted-blue);
+    --acento-suave:  rgba(72, 202, 228, 0.18);
+    --sobre-acento:  var(--deep-twilight);
+
+    --alerta:        #ff6b6b;
+    --alerta-suave:  rgba(255, 107, 107, 0.18);
+
+    --sombra:        0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -235,7 +271,7 @@ body {
 
 .chip[aria-pressed="true"] {
   background: var(--acento);
-  color: #fff;
+  color: var(--sobre-acento);
 }
 
 /* ---------- Tablero ---------- */
@@ -426,6 +462,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 24px;
+  background: var(--bg);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -466,7 +503,7 @@ body {
 
 .nav__links a[aria-current="page"] { color: var(--texto); }
 
-.nav__totem[aria-pressed="true"] { background: var(--acento); color: #fff; }
+.nav__totem[aria-pressed="true"] { background: var(--acento); color: var(--sobre-acento); }
 
 /* ---------- Botones (compartidos por todo el sitio) ---------- */
 .btn {
@@ -489,8 +526,8 @@ body {
 /* Hundir apenas el boton al presionarlo: el unico feedback tactil que hay */
 .btn:active { transform: scale(0.97); }
 
-.btn--principal { background: var(--acento); color: #fff; }
-.btn--principal:hover { background: color-mix(in srgb, var(--acento) 88%, #000); }
+.btn--principal { background: var(--acento); color: var(--sobre-acento); }
+.btn--principal:hover { background: var(--acento-fuerte); }
 
 .btn--plano { background: transparent; color: var(--acento); }
 .btn--plano:hover { background: var(--acento-suave); }
@@ -588,7 +625,7 @@ body {
 /* ---------- Franjas de datos (limites de equipaje) ---------- */
 .franjas {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 72px;
 }

@@ -577,16 +577,42 @@
   margin-top: 12px;
 }
 
-.maleta__kg {
-  min-width: 74px;
-  text-align: right;
-  font-size: 17px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  transition: color var(--transicion);
+/* Campo numerico junto al slider: el slider sirve para el totem (dedo) y el
+   numero para teclear exactamente lo que marco la balanza. Editan el mismo
+   dato y quedan disponibles hasta facturar. */
+.maleta__campo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: none;
+  padding: 6px 10px;
+  background: var(--superficie-2);
+  border-radius: var(--radio-sm);
 }
 
-.maleta__kg--alerta { color: var(--alerta); }
+.maleta__num {
+  width: 58px;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: color var(--transicion);
+  /* Las flechitas del input number estorban al lado del slider */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.maleta__num::-webkit-outer-spin-button,
+.maleta__num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.maleta__num--alerta { color: var(--alerta); }
+
+.maleta__unidad { font-size: 13px; color: var(--texto-2); }
 
 .maleta__estado {
   display: block;
@@ -896,7 +922,7 @@
   justify-content: space-between;
   padding: 16px 24px;
   background: var(--acento);
-  color: #fff;
+  color: var(--sobre-acento);
 }
 
 .pase__marca { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
@@ -1060,6 +1086,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--bg);
   background: color-mix(in srgb, var(--bg) 72%, transparent);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
@@ -1128,6 +1155,16 @@ body.modo-totem .progreso__paso { font-size: 14px; }
   .medidor { gap: 16px; }
   .etiqueta .barras { display: none; }
 
+  /* La comparacion de pesos pasa de fila a bloque */
+  .pesaje {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+  }
+
+  .pesaje__nombre { grid-column: 1 / -1; }
+  .pesaje__valor { text-align: left; }
+  .pesaje__dif { grid-column: 1 / -1; min-width: 0; text-align: left; }
+
   /* La barra de progreso deja solo las lineas: los rotulos no caben */
   .progreso__texto { display: none; }
   .progreso__paso--activo .progreso__texto { display: block; }
@@ -1144,6 +1181,98 @@ body.modo-totem .progreso__paso { font-size: 14px; }
   .app--checkin { padding: 0; }
   .pase,
   .etiqueta { box-shadow: none; border: 1px solid #ccc; }
+}
+
+/* ---------- Pista bajo un control ---------- */
+.pista {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+/* ---------- Comparacion declarado / verificado ----------
+   Una fila por maleta: lo que dijo el pasajero, lo que marco la balanza y la
+   diferencia. La diferencia solo se pinta de rojo cuando implica una deuda. */
+.pesaje {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px 20px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-top: 1px solid var(--linea);
+}
+
+.pesaje:first-child { border-top: 0; }
+
+.pesaje__nombre { font-size: 14.5px; font-weight: 500; }
+
+.pesaje__valor {
+  font-size: 14.5px;
+  color: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pesaje__valor strong { color: var(--texto); font-weight: 600; }
+
+.pesaje__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.pesaje__dif {
+  min-width: 96px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-3);
+}
+
+.pesaje__dif--mas { color: var(--alerta); }
+.pesaje__dif--menos { color: var(--acento); }
+
+/* ---------- Monto en rojo (deuda) ---------- */
+.monto--alerta .monto__valor { color: var(--alerta); }
+
+/* ---------- Controles de demo ----------
+   Se ven distintos del resto a proposito: no son parte del producto. */
+.demo__grupo { margin-top: 16px; }
+
+.demo__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.demo__opciones { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.demo__btn {
+  border: 1px dashed var(--linea);
+  background: transparent;
+  color: var(--texto-2);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background var(--transicion), color var(--transicion), border-color var(--transicion);
+}
+
+.demo__btn:hover { color: var(--texto); }
+
+.demo__btn--activa {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--sobre-acento);
 }
 
 /* =========================================================================

@@ -23,23 +23,45 @@ APP.checkinDatos = (function () {
     APERTURA_CHECKIN_MIN: 48 * 60,
     CIERRE_CHECKIN_MIN: 60,
 
-    // Equipaje de mano.
+    // Equipaje de mano. La medida es orientativa: quien decide es el gabinete
+    // fisico del aeropuerto, no lo que se declare aca.
     MANO_PESO_MAX_KG: 10,
     MANO_MEDIDAS_CM: '55 x 35 x 25',
 
     // Equipaje despachado.
     DESPACHADA_PESO_MAX_KG: 23,   // limite incluido en la franquicia
-    DESPACHADA_PESO_TOPE_KG: 32,  // sobre esto no se acepta en el mostrador automatico
+    DESPACHADA_PESO_TOPE_KG: 32,  // sobre esto no se acepta en autoservicio
     MAX_MALETAS_DESPACHADAS: 4,
 
     // Tarifas simuladas, en pesos chilenos.
     TARIFA_EXCESO_KG: 8500,
     TARIFA_MALETA_EXTRA: 45000,
-    TARIFA_MANO_A_BODEGA: 25000,
+    TARIFA_GATE_CHECK: 25000,     // facturar una pieza de mano en el momento
+
+    /* --- Verificacion posterior del peso ---
+       El pasajero declara el peso que marco la balanza; despues, en el punto
+       de entrega, la maleta se vuelve a pesar. Aca se simula ese segundo
+       pesaje: no hay balanza conectada, el "peso real" sale de estos numeros.
+       DESVIACION_PESO_MAX_KG es cuanto puede alejarse del valor declarado. */
+    PROB_PESO_COINCIDE: 0.45,
+    DESVIACION_PESO_MAX_KG: 5,
+
+    /* --- Gabinete de equipaje de mano ---
+       Probabilidad de que el bolso no pase el gabinete fisico y haya que
+       facturarlo en el momento. */
+    PROB_MANO_NO_PASA: 0.25,
+
+    /* --- Consecuencias de la diferencia de peso ---
+       Plazo para regularizar una deuda antes de que se bloqueen los viajes
+       futuros, y cuantas millas equivale un peso al pedir el reembolso.
+       Ambos siguen abiertos con el cliente. */
+    PLAZO_DEUDA_DIAS: 30,
+    MILLAS_POR_PESO: 0.5,
 
     // Esperas simuladas (ms de tiempo real) para que se vea el "procesando".
     DEMORA_VALIDACION_MS: 1100,
     DEMORA_PAGO_MS: 1600,
+    DEMORA_PESAJE_MS: 1800,
     DEMORA_EMISION_MS: 1400,
 
     // Intentos de identificacion antes de derivar a mostrador.
@@ -56,8 +78,16 @@ APP.checkinDatos = (function () {
      Que medios se aceptarian de verdad sigue abierto con el cliente. */
   var MEDIOS_PAGO = [
     { id: 'cuenta',  nombre: 'Cuenta AeroAndes',  detalle: 'Tarjeta vinculada &middot; termina en 4417', preferido: true },
-    { id: 'credito', nombre: 'Tarjeta de credito', detalle: 'Guardada en el perfil &middot; termina en 9082' },
-    { id: 'debito',  nombre: 'Tarjeta de debito',  detalle: 'Guardada en el perfil &middot; termina en 3310' }
+    { id: 'credito', nombre: 'Tarjeta de crédito', detalle: 'Guardada en el perfil &middot; termina en 9082' },
+    { id: 'debito',  nombre: 'Tarjeta de débito',  detalle: 'Guardada en el perfil &middot; termina en 3310' }
+  ];
+
+  /* ---------- Como se devuelve un cobro de mas ----------
+     Si el peso real resulta menor al declarado, el pasajero elige como
+     recibir la diferencia. */
+  var MEDIOS_REEMBOLSO = [
+    { id: 'millas',  nombre: 'Millas AeroAndes', detalle: 'Se acreditan en tu cuenta al cierre del vuelo' },
+    { id: 'tarjeta', nombre: 'A tu tarjeta',     detalle: 'A la misma tarjeta con que pagaste &middot; termina en 4417' }
   ];
 
   /* ---------- Reservas simuladas ----------
@@ -84,7 +114,7 @@ APP.checkinDatos = (function () {
     {
       codigo: 'AN7K2P',
       documento: '12.345.678-9',
-      pasajero: { nombre: 'Maria Fernanda Rios', tipoDocumento: 'RUN', nacionalidad: 'Chile' },
+      pasajero: { nombre: 'María Fernanda Ríos', tipoDocumento: 'RUN', nacionalidad: 'Chile' },
       vuelo: {
         codigo: 'AN3020', origen: 'SCL', destino: 'PMC',
         enMinutos: 260, duracionMin: 110, puerta: 'B2', equipo: 'A321'
@@ -97,7 +127,7 @@ APP.checkinDatos = (function () {
     {
       codigo: 'AN9QLM',
       documento: '9.871.234-K',
-      pasajero: { nombre: 'Rodrigo Alcaino Vera', tipoDocumento: 'RUN', nacionalidad: 'Chile' },
+      pasajero: { nombre: 'Rodrigo Alcaíno Vera', tipoDocumento: 'RUN', nacionalidad: 'Chile' },
       vuelo: {
         codigo: 'AN5501', origen: 'SCL', destino: 'EZE',
         enMinutos: 195, duracionMin: 135, puerta: 'C4', equipo: 'A320neo'
@@ -106,7 +136,7 @@ APP.checkinDatos = (function () {
       asiento: '11A',
       franquicia: { mano: 1, despachadas: 1 },
       // Un menor en la reserva activa la declaracion de autorizacion notarial.
-      menores: [{ nombre: 'Emilia Alcaino Soto', edad: 9, parentesco: 'Hija' }]
+      menores: [{ nombre: 'Emilia Alcaíno Soto', edad: 9, parentesco: 'Hija' }]
     },
     {
       codigo: 'AN3TZ8',
@@ -144,6 +174,7 @@ APP.checkinDatos = (function () {
   return {
     CONFIG: CONFIG,
     MEDIOS_PAGO: MEDIOS_PAGO,
+    MEDIOS_REEMBOLSO: MEDIOS_REEMBOLSO,
     normalizar: normalizar,
 
     /** Codigos disponibles: solo para la ayuda de la demo, no es una funcion del producto. */

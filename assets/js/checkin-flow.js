@@ -2,17 +2,25 @@
    FLUJO DE CHECK-IN
    -------------------------------------------------------------------------
    Responsabilidad unica: llevar el estado del check-in y las reglas que lo
-   gobiernan (ventana horaria, cargos por equipaje, cuando corresponde pedir
-   la autorizacion de un menor, cuando hay que derivar a mostrador).
+   gobiernan (ventana horaria, cargos por equipaje, verificacion posterior del
+   peso, cuando corresponde pedir la autorizacion de un menor, cuando hay que
+   derivar a mostrador).
 
    No toca el DOM. Todo lo que la UI necesita sale de `obtenerVista()`.
 
    IMPORTANTE: es una simulacion. Aca no se valida ninguna identidad real, no
-   se lee ningun documento y no se cobra nada de verdad. Las esperas son
-   setTimeout y los resultados salen de CONFIG, no de un servicio externo.
+   se lee ningun documento, no hay balanza ni gabinete conectados y no se cobra
+   nada de verdad. Las esperas son setTimeout y los resultados salen de CONFIG.
+
+   MODELO DE EQUIPAJE (ver README):
+   lo que el pasajero declara es una declaracion bajo su responsabilidad, no un
+   dato verificado. Despues, en el punto de entrega, la maleta se vuelve a
+   pesar y la diferencia se resuelve como deuda o como reembolso. Por eso el
+   check-in NO se bloquea por una diferencia de peso: la plata se ajusta igual.
 
    Pasos internos:
-     identificacion -> vuelo -> equipaje -> [pago] -> [menor] -> restricciones -> pase
+     identificacion -> vuelo -> equipaje -> [pago] -> verificacion
+       -> [deuda | reembolso] -> [gatecheck] -> [menor] -> restricciones -> pase
      y, desde cualquiera de ellos, la salida alternativa: mostrador
    ========================================================================= */
 
@@ -40,10 +48,18 @@ APP.crearFlujoCheckin = function () {
     vuelo: 'vuelo',
     equipaje: 'equipaje',
     pago: 'equipaje',
+    verificacion: 'equipaje',
+    deuda: 'equipaje',
+    reembolso: 'equipaje',
+    gatecheck: 'equipaje',
     menor: 'documentos',
     restricciones: 'documentos',
     pase: 'pase'
   };
+
+  // Hasta donde se puede volver atras. Una vez que la maleta se peso en el
+  // punto de entrega ya no tiene sentido editar la declaracion.
+  var PASOS_CON_VUELTA = { vuelo: 'identificacion', equipaje: 'vuelo', pago: 'equipaje' };
 
   var suscriptores = [];
   var temporizador = null;
@@ -68,16 +84,28 @@ APP.crearFlujoCheckin = function () {
 
       equipaje: {
         mano: 1,
-        manoNoCabe: false,
-        despachadas: []              // pesos en kg, uno por maleta
+        despachadas: [],             // pesos declarados en kg, uno por maleta
+        condicionesAceptadas: false  // acepta responsabilidad por lo declarado
       },
 
       pago: {
         medio: 'cuenta',
-        estado: 'pendiente',         // pendiente | procesando | pagado | rechazado
+        estado: 'pendiente',         // pendiente | pagado | rechazado
         intentos: 0,
         simularRechazo: false        // interruptor de demo, no una funcion real
       },
+
+      /* Forzadores de la demo: permiten mostrar cada desenlace a voluntad en
+         la presentacion en vez de depender del azar. No son del producto. */
+      demo: {
+        verificacion: 'aleatorio',   // aleatorio | coincide | mayor | menor
+        gabinete: 'aleatorio'        // aleatorio | pasa | no-pasa
+      },
+
+      verificacion: null,            // resultado del pesaje en el punto de entrega
+      deuda: null,                   // { monto, estado }
+      reembolso: null,               // { monto, millas, medio, estado }
+      gate: null,                    // { piezas, monto, estado }
 
       pase: null,
       mostrador: null                // { titulo, motivo, sugerencia }
@@ -117,19 +145,27 @@ APP.crearFlujoCheckin = function () {
     irA('mostrador', 'avanza');
   }
 
-  /* ---------- Reglas de equipaje ----------
-     Funcion pura: mismas entradas, mismo resultado. Aca vive toda la politica
-     de cobro, que es justo lo que hay que ajustar cuando el cliente confirme
-     sus limites reales. */
-  function calcularCargos(equipaje, franquicia) {
+  /* =======================================================================
+     REGLAS DE EQUIPAJE
+     ======================================================================= */
+
+  /**
+   * Cargos del equipaje despachado. Funcion pura: mismas entradas, mismo
+   * resultado. Se usa dos veces con entradas distintas — con los pesos
+   * declarados y con los verificados — y la resta de ambas es la diferencia
+   * que despues se cobra o se devuelve.
+   *
+   * El equipaje de mano NO entra aca: quien decide si una pieza va a bodega es
+   * el gabinete fisico del aeropuerto, y eso se resuelve en el gate-check.
+   */
+  function calcularCargos(despachadas, franquicia) {
     var detalle = [];
     var bloqueos = [];
 
-    equipaje.despachadas.forEach(function (kg, i) {
+    despachadas.forEach(function (kg, i) {
       var numero = i + 1;
-      var incluida = i < franquicia.despachadas;
 
-      if (!incluida) {
+      if (i >= franquicia.despachadas) {
         detalle.push({
           concepto: 'Maleta adicional (N&deg; ' + numero + ')',
           nota: 'La reserva incluye ' + franquicia.despachadas + ' maleta(s) despachada(s)',
@@ -153,24 +189,96 @@ APP.crearFlujoCheckin = function () {
       }
     });
 
-    // Todo lo de mano que no cumple pasa a bodega: es la version digital del
-    // gabinete medidor que hoy se usa en el mostrador.
-    var piezasABodega = Math.max(0, equipaje.mano - franquicia.mano) + (equipaje.manoNoCabe ? 1 : 0);
-    if (piezasABodega > 0) {
-      detalle.push({
-        concepto: 'Equipaje de mano enviado a bodega',
-        nota: piezasABodega + ' pieza(s) fuera de la medida ' + CONFIG.MANO_MEDIDAS_CM + ' cm',
-        monto: piezasABodega * CONFIG.TARIFA_MANO_A_BODEGA
-      });
-    }
-
-    var total = detalle.reduce(function (acc, d) { return acc + d.monto; }, 0);
-
     return {
       detalle: detalle,
-      total: total,
-      bloqueos: bloqueos,
-      piezasABodega: piezasABodega
+      total: detalle.reduce(function (acc, d) { return acc + d.monto; }, 0),
+      bloqueos: bloqueos
+    };
+  }
+
+  function cargosActuales() {
+    if (!estado.reserva) return { detalle: [], total: 0, bloqueos: [] };
+    return calcularCargos(estado.equipaje.despachadas, estado.reserva.franquicia);
+  }
+
+  /* ---------- Segundo pesaje (simulado) ----------
+     No hay balanza: el "peso real" se genera aca. Los modos de demo permiten
+     forzar cada desenlace para la presentacion. */
+  function pesoRealSimulado(declarado) {
+    var modo = estado.demo.verificacion;
+    var tope = CONFIG.DESVIACION_PESO_MAX_KG;
+    var delta;
+
+    if (modo === 'coincide') {
+      delta = 0;
+    } else if (modo === 'mayor') {
+      delta = 1 + Math.random() * tope;
+    } else if (modo === 'menor') {
+      delta = -(1 + Math.random() * tope);
+    } else {
+      delta = Math.random() < CONFIG.PROB_PESO_COINCIDE
+        ? 0
+        : (Math.random() * 2 - 1) * tope;
+    }
+
+    var real = declarado + delta;
+    // Una balanza de aeropuerto marca de medio kilo en medio kilo.
+    real = Math.round(Math.max(0, Math.min(CONFIG.DESPACHADA_PESO_TOPE_KG, real)) * 2) / 2;
+    return real;
+  }
+
+  /**
+   * Compara lo declarado con lo verificado y traduce la diferencia a plata.
+   * La diferencia se calcula sobre los CARGOS, no sobre los kilos: si ambos
+   * pesos caen dentro de la franquicia incluida, no se debe ni se devuelve
+   * nada aunque los kilos no sean identicos.
+   */
+  function construirVerificacion() {
+    var declaradas = estado.equipaje.despachadas;
+    var franquicia = estado.reserva.franquicia;
+    var reales = declaradas.map(pesoRealSimulado);
+
+    var cargoDeclarado = calcularCargos(declaradas, franquicia).total;
+    var cargoReal = calcularCargos(reales, franquicia).total;
+    var diferencia = cargoReal - cargoDeclarado;
+
+    return {
+      piezas: declaradas.map(function (kg, i) {
+        return { declarado: kg, real: reales[i], diferencia: reales[i] - kg };
+      }),
+      cargoDeclarado: cargoDeclarado,
+      cargoReal: cargoReal,
+      diferencia: diferencia,
+      resultado: diferencia > 0 ? 'deuda' : (diferencia < 0 ? 'reembolso' : 'coincide'),
+      monto: Math.abs(diferencia),
+      millas: Math.round(Math.abs(diferencia) * CONFIG.MILLAS_POR_PESO)
+    };
+  }
+
+  /* ---------- Gabinete de equipaje de mano (simulado) ----------
+     Dos motivos distintos para tener que facturar una pieza en el momento:
+     declarar mas piezas de las que incluye la tarifa (se sabe de antemano) y
+     que el bolso no entre en el gabinete (se sabe recien en el aeropuerto). */
+  function construirGate() {
+    var mano = estado.equipaje.mano;
+    var sobrantes = Math.max(0, mano - estado.reserva.franquicia.mano);
+
+    var noPasa = false;
+    if (mano > 0) {
+      var modo = estado.demo.gabinete;
+      noPasa = modo === 'no-pasa' ? true
+             : modo === 'pasa' ? false
+             : Math.random() < CONFIG.PROB_MANO_NO_PASA;
+    }
+
+    var piezas = Math.min(mano, sobrantes + (noPasa ? 1 : 0));
+
+    return {
+      piezas: piezas,
+      sobrantes: sobrantes,
+      noPasa: noPasa,
+      monto: piezas * CONFIG.TARIFA_GATE_CHECK,
+      estado: 'pendiente'   // pendiente | facturado
     };
   }
 
@@ -192,17 +300,19 @@ APP.crearFlujoCheckin = function () {
   /* ---------- Generacion del pase (simulada) ---------- */
   function generarPase() {
     var r = estado.reserva;
-    var cargos = calcularCargos(estado.equipaje, r.franquicia);
-    var piezasDespachadas = estado.equipaje.despachadas.length + cargos.piezasABodega;
 
-    var etiquetas = [];
-    for (var i = 0; i < piezasDespachadas; i++) {
-      etiquetas.push({
-        numero: 'AN ' + String(100000 + Math.floor(Math.random() * 899999)),
-        destino: r.vuelo.destino,
-        // Solo las primeras corresponden a maletas declaradas con peso.
-        peso: i < estado.equipaje.despachadas.length ? estado.equipaje.despachadas[i] : null
-      });
+    // Las etiquetas salen del peso verificado, no del declarado: es el que
+    // realmente viaja con la maleta.
+    var etiquetas = estado.equipaje.despachadas.map(function (kg, i) {
+      var real = estado.verificacion ? estado.verificacion.piezas[i].real : kg;
+      return { numero: numeroEtiqueta(), destino: r.vuelo.destino, peso: real, origen: 'despachada' };
+    });
+
+    // Las piezas de mano facturadas en el gabinete tambien llevan etiqueta.
+    if (estado.gate && estado.gate.estado === 'facturado') {
+      for (var i = 0; i < estado.gate.piezas; i++) {
+        etiquetas.push({ numero: numeroEtiqueta(), destino: r.vuelo.destino, peso: null, origen: 'gate' });
+      }
     }
 
     return {
@@ -218,11 +328,31 @@ APP.crearFlujoCheckin = function () {
     };
   }
 
+  function numeroEtiqueta() {
+    return 'AN ' + String(100000 + Math.floor(Math.random() * 899999));
+  }
+
+  /* =======================================================================
+     NAVEGACION
+     Cual es el siguiente paso depende de lo declarado y de como resulto la
+     verificacion: sin cargos no hay pantalla de pago, sin maletas no hay
+     verificacion, sin menores no hay autorizacion.
+     ======================================================================= */
+
+  function despuesDeEquipaje() {
+    if (estado.gate && estado.gate.piezas > 0 && estado.gate.estado === 'pendiente') return 'gatecheck';
+    return estado.declaraciones.viajaConMenor ? 'menor' : 'restricciones';
+  }
+
+  function despuesDeVerificacion() {
+    if (estado.verificacion.resultado === 'deuda' && estado.deuda.estado === 'pendiente') return 'deuda';
+    if (estado.verificacion.resultado === 'reembolso' && estado.reembolso.estado === 'pendiente') return 'reembolso';
+    return despuesDeEquipaje();
+  }
+
   /* ---------- Vista para la UI ---------- */
   function obtenerVista() {
-    var cargos = estado.reserva
-      ? calcularCargos(estado.equipaje, estado.reserva.franquicia)
-      : { detalle: [], total: 0, bloqueos: [], piezasABodega: 0 };
+    var cargos = cargosActuales();
 
     var grupoActual = GRUPO_DE_PASO[estado.paso] || null;
     var indiceGrupo = -1;
@@ -239,14 +369,21 @@ APP.crearFlujoCheckin = function () {
       declaraciones: estado.declaraciones,
       equipaje: estado.equipaje,
       pago: estado.pago,
+      demo: estado.demo,
+      verificacion: estado.verificacion,
+      deuda: estado.deuda,
+      reembolso: estado.reembolso,
+      gate: estado.gate,
       pase: estado.pase,
       mostrador: estado.mostrador,
 
       cargos: cargos,
       hayCargos: cargos.total > 0,
       pagoResuelto: cargos.total === 0 || estado.pago.estado === 'pagado',
+      puedeSalirDeEquipaje: estado.equipaje.condicionesAceptadas && cargos.bloqueos.length === 0,
       requiereAutorizacionMenor: requiereAutorizacionMenor(),
       autorizacionResuelta: autorizacionResuelta(),
+      puedeRetroceder: Boolean(PASOS_CON_VUELTA[estado.paso]),
 
       internacional: estado.reserva
         ? APP.aeropuertos.esInternacional(estado.reserva.vuelo.origen, estado.reserva.vuelo.destino)
@@ -259,44 +396,12 @@ APP.crearFlujoCheckin = function () {
     };
   }
 
-  /* ---------- Navegacion entre pasos ----------
-     Cual es el siguiente paso depende de lo que el pasajero haya declarado:
-     sin cargos no hay pantalla de pago, sin menores no hay autorizacion. */
-  function siguienteDe(paso) {
-    var cargos = calcularCargos(estado.equipaje, estado.reserva.franquicia);
-
-    switch (paso) {
-      case 'vuelo':
-        return 'equipaje';
-      case 'equipaje':
-        if (cargos.total > 0 && estado.pago.estado !== 'pagado') return 'pago';
-        return estado.declaraciones.viajaConMenor ? 'menor' : 'restricciones';
-      case 'pago':
-        return estado.declaraciones.viajaConMenor ? 'menor' : 'restricciones';
-      case 'menor':
-        return 'restricciones';
-      case 'restricciones':
-        return 'pase';
-      default:
-        return paso;
-    }
-  }
-
-  function anteriorDe(paso) {
-    switch (paso) {
-      case 'vuelo':          return 'identificacion';
-      case 'equipaje':       return 'vuelo';
-      case 'pago':           return 'equipaje';
-      case 'menor':          return estado.pago.estado === 'pagado' ? 'pago' : 'equipaje';
-      case 'restricciones':  return estado.declaraciones.viajaConMenor ? 'menor' : 'equipaje';
-      default:               return paso;
-    }
-  }
-
   estado = estadoInicial();
 
-  /* ---------- API publica ---------- */
-  return {
+  /* =======================================================================
+     API PUBLICA
+     ======================================================================= */
+  var api = {
     alCambiar: function (cb) {
       suscriptores.push(cb);
       cb(obtenerVista());
@@ -304,13 +409,13 @@ APP.crearFlujoCheckin = function () {
 
     obtenerVista: obtenerVista,
 
-    // Expuesta para poder revisar la politica de cobro sin pasar por la UI.
+    // Expuestas para poder revisar las reglas sin pasar por la UI.
     calcularCargos: calcularCargos,
 
     /* --- Paso 1: identificacion (simulada) --- */
     identificar: function (codigo, documento) {
       if (!codigo || !documento) {
-        estado.error = { campo: 'general', texto: 'Ingresa el codigo de reserva y tu documento.' };
+        estado.error = { campo: 'general', texto: 'Ingresa el código de reserva y tu documento.' };
         return emitir();
       }
 
@@ -322,13 +427,13 @@ APP.crearFlujoCheckin = function () {
           if (estado.intentosIdentidad >= CONFIG.MAX_INTENTOS_IDENTIDAD) {
             return aMostrador(
               'No pudimos encontrar tu reserva',
-              'Se agotaron los intentos de busqueda del codigo de reserva.',
+              'Se agotaron los intentos de busqueda del código de reserva.',
               'En el mostrador pueden buscarla con tu documento o con el correo de compra.'
             );
           }
           estado.error = {
             campo: 'codigo',
-            texto: 'No encontramos una reserva con ese codigo. Te queda(n) ' +
+            texto: 'No encontramos una reserva con ese código. Te queda(n) ' +
                    (CONFIG.MAX_INTENTOS_IDENTIDAD - estado.intentosIdentidad) + ' intento(s).'
           };
           return emitir();
@@ -339,8 +444,8 @@ APP.crearFlujoCheckin = function () {
           if (estado.intentosIdentidad >= CONFIG.MAX_INTENTOS_IDENTIDAD) {
             return aMostrador(
               'El documento no coincide con la reserva',
-              'Se agotaron los intentos de validacion del documento.',
-              'Un agente puede verificar tu identidad de forma presencial con tu documento fisico.'
+              'Se agotaron los intentos de validación del documento.',
+              'Un agente puede verificar tu identidad de forma presencial con tu documento físico.'
             );
           }
           estado.error = {
@@ -359,11 +464,11 @@ APP.crearFlujoCheckin = function () {
         if (reserva.vuelo.enMinutos < CONFIG.CIERRE_CHECKIN_MIN) {
           estado.reserva = reserva;
           return aMostrador(
-            'El check-in en linea ya esta cerrado',
+            'El check-in en línea ya está cerrado',
             'El vuelo ' + reserva.vuelo.codigo + ' sale en ' + reserva.vuelo.enMinutos +
-            ' minutos y el check-in en linea cierra ' + CONFIG.CIERRE_CHECKIN_MIN +
+            ' minutos y el check-in en línea cierra ' + CONFIG.CIERRE_CHECKIN_MIN +
             ' minutos antes de la salida.',
-            'Acercate al counter de AeroAndes: todavia alcanzas a documentar de forma presencial.'
+            'Acércate al counter de AeroAndes: todavía alcanzas a documentar de forma presencial.'
           );
         }
 
@@ -386,13 +491,6 @@ APP.crearFlujoCheckin = function () {
     },
 
     /* --- Paso 2: confirmacion del vuelo --- */
-    confirmarVuelo: function (declaraciones) {
-      if (declaraciones && typeof declaraciones.viajaConMenor === 'boolean') {
-        estado.declaraciones.viajaConMenor = declaraciones.viajaConMenor;
-      }
-      irA('equipaje', 'avanza');
-    },
-
     setViajaConMenor: function (valor) {
       estado.declaraciones.viajaConMenor = Boolean(valor);
       if (!valor) {
@@ -402,37 +500,53 @@ APP.crearFlujoCheckin = function () {
       emitir();
     },
 
-    /* --- Paso 3: equipaje --- */
-    setEquipajeMano: function (cantidad, noCabe) {
+    /* --- Paso 3: declaracion de equipaje --- */
+    setEquipajeMano: function (cantidad) {
       estado.equipaje.mano = Math.max(0, Math.min(2, cantidad));
-      if (typeof noCabe === 'boolean') estado.equipaje.manoNoCabe = noCabe;
-      // Cambiar el equipaje invalida un pago anterior: el monto ya no es el mismo.
-      if (estado.pago.estado === 'pagado') estado.pago.estado = 'pendiente';
       emitir();
     },
 
     agregarMaleta: function () {
       if (estado.equipaje.despachadas.length >= CONFIG.MAX_MALETAS_DESPACHADAS) return;
       estado.equipaje.despachadas.push(CONFIG.DESPACHADA_PESO_MAX_KG);
-      if (estado.pago.estado === 'pagado') estado.pago.estado = 'pendiente';
+      invalidarPago();
       emitir();
     },
 
     quitarMaleta: function (indice) {
       estado.equipaje.despachadas.splice(indice, 1);
-      if (estado.pago.estado === 'pagado') estado.pago.estado = 'pendiente';
+      invalidarPago();
       emitir();
     },
 
+    /** El peso queda editable hasta facturar: no es un valor de una sola vez. */
     setPesoMaleta: function (indice, kg) {
       var valor = Number(kg);
       if (isNaN(valor)) return;
       estado.equipaje.despachadas[indice] = Math.max(0, Math.min(45, valor));
-      if (estado.pago.estado === 'pagado') estado.pago.estado = 'pendiente';
+      invalidarPago();
       emitir();
     },
 
-    /* --- Paso 4: pago simulado del exceso --- */
+    aceptarCondiciones: function (valor) {
+      estado.equipaje.condicionesAceptadas = Boolean(valor);
+      // Si el error visible era justamente que faltaba aceptar, ya no aplica.
+      if (valor && estado.error && estado.error.campo === 'condiciones') estado.error = null;
+      emitir();
+    },
+
+    /* --- Controles de demo (no son funciones del producto) --- */
+    setDemoVerificacion: function (modo) {
+      estado.demo.verificacion = modo;
+      emitir();
+    },
+
+    setDemoGabinete: function (modo) {
+      estado.demo.gabinete = modo;
+      emitir();
+    },
+
+    /* --- Paso 4: pago del exceso declarado --- */
     setMedioPago: function (id) {
       estado.pago.medio = id;
       if (estado.pago.estado === 'rechazado') {
@@ -468,7 +582,77 @@ APP.crearFlujoCheckin = function () {
       });
     },
 
-    /* --- Paso 5: autorizacion de un menor --- */
+    /* --- Paso 5: verificacion en el punto de entrega ---
+       Aca se simula el segundo pesaje y el paso por el gabinete. A partir de
+       este punto la declaracion ya no se puede editar. */
+    verificarEnAeropuerto: function () {
+      if (estado.ocupado) return;
+
+      esperar(CONFIG.DEMORA_PESAJE_MS, 'Pesando tu equipaje en el punto de entrega', function () {
+        estado.gate = construirGate();
+
+        if (estado.equipaje.despachadas.length === 0) {
+          // Sin maletas despachadas no hay nada que verificar.
+          estado.verificacion = null;
+          return irA(despuesDeEquipaje(), 'avanza');
+        }
+
+        estado.verificacion = construirVerificacion();
+
+        if (estado.verificacion.resultado === 'deuda') {
+          estado.deuda = { monto: estado.verificacion.monto, estado: 'pendiente' };
+        } else if (estado.verificacion.resultado === 'reembolso') {
+          estado.reembolso = {
+            monto: estado.verificacion.monto,
+            millas: estado.verificacion.millas,
+            medio: 'millas',
+            estado: 'pendiente'
+          };
+        }
+
+        irA('verificacion', 'avanza');
+      });
+    },
+
+    /* --- Deuda por peso declarado de menos --- */
+    pagarDeuda: function () {
+      if (estado.ocupado) return;
+      esperar(CONFIG.DEMORA_PAGO_MS, 'Procesando el pago', function () {
+        estado.deuda.estado = 'pagada';
+        emitir();
+      });
+    },
+
+    /** Dejar la deuda pendiente es una opcion, con su consecuencia declarada. */
+    aplazarDeuda: function () {
+      estado.deuda.estado = 'aplazada';
+      irA(despuesDeEquipaje(), 'avanza');
+    },
+
+    /* --- Reembolso por peso declarado de mas --- */
+    setMedioReembolso: function (id) {
+      estado.reembolso.medio = id;
+      emitir();
+    },
+
+    confirmarReembolso: function () {
+      if (estado.ocupado) return;
+      esperar(CONFIG.DEMORA_PAGO_MS, 'Registrando tu reembolso', function () {
+        estado.reembolso.estado = 'confirmado';
+        emitir();
+      });
+    },
+
+    /* --- Gate-check del equipaje de mano --- */
+    facturarEnGate: function () {
+      if (estado.ocupado) return;
+      esperar(CONFIG.DEMORA_PAGO_MS, 'Facturando tu equipaje de mano', function () {
+        estado.gate.estado = 'facturado';
+        emitir();
+      });
+    },
+
+    /* --- Autorizacion de un menor --- */
     responderMenorConAmbosPadres: function (valor) {
       estado.declaraciones.menorConAmbosPadres = valor;
       if (valor === true) estado.declaraciones.autorizacion = null;
@@ -478,7 +662,7 @@ APP.crearFlujoCheckin = function () {
     adjuntarAutorizacion: function (nombreArchivo) {
       esperar(CONFIG.DEMORA_VALIDACION_MS, 'Recibiendo el documento', function () {
         // Se registra el adjunto, no se lee ni se valida su contenido.
-        estado.declaraciones.autorizacion = { nombre: nombreArchivo || 'autorizacion.pdf' };
+        estado.declaraciones.autorizacion = { nombre: nombreArchivo || 'autorización.pdf' };
         emitir();
       });
     },
@@ -488,7 +672,7 @@ APP.crearFlujoCheckin = function () {
       emitir();
     },
 
-    /* --- Paso final: emision del pase --- */
+    /* --- Emision del pase --- */
     emitirPase: function () {
       esperar(CONFIG.DEMORA_EMISION_MS, 'Emitiendo tu pase de abordar', function () {
         estado.pase = generarPase();
@@ -499,21 +683,54 @@ APP.crearFlujoCheckin = function () {
     /* --- Navegacion --- */
     avanzar: function () {
       if (estado.ocupado) return;
-      var siguiente = siguienteDe(estado.paso);
-      if (siguiente === 'pase') return this.emitirPase();
-      irA(siguiente, 'avanza');
+
+      switch (estado.paso) {
+        case 'vuelo':
+          return irA('equipaje', 'avanza');
+
+        case 'equipaje':
+          if (!estado.equipaje.condicionesAceptadas) {
+            estado.error = {
+              campo: 'condiciones',
+              texto: 'Para continuar tienes que aceptar las condiciones de declaración de equipaje.'
+            };
+            return emitir();
+          }
+          if (cargosActuales().total > 0 && estado.pago.estado !== 'pagado') {
+            return irA('pago', 'avanza');
+          }
+          return api.verificarEnAeropuerto();
+
+        case 'pago':
+          return api.verificarEnAeropuerto();
+
+        case 'verificacion':
+          return irA(despuesDeVerificacion(), 'avanza');
+
+        case 'deuda':
+        case 'reembolso':
+        case 'gatecheck':
+          return irA(despuesDeEquipaje(), 'avanza');
+
+        case 'menor':
+          return irA('restricciones', 'avanza');
+
+        case 'restricciones':
+          return api.emitirPase();
+      }
     },
 
     retroceder: function () {
-      if (estado.paso === 'identificacion' || estado.ocupado) return;
-      irA(anteriorDe(estado.paso), 'retrocede');
+      if (estado.ocupado) return;
+      var anterior = PASOS_CON_VUELTA[estado.paso];
+      if (anterior) irA(anterior, 'retrocede');
     },
 
     derivarAMostrador: function (titulo, motivo, sugerencia) {
       aMostrador(
         titulo || 'Te derivamos a un mostrador',
-        motivo || 'Este caso necesita la revision de un agente.',
-        sugerencia || 'Acercate al counter de AeroAndes con tu documento y tu equipaje.'
+        motivo || 'Este caso necesita la revisión de un agente.',
+        sugerencia || 'Acércate al counter de AeroAndes con tu documento y tu equipaje.'
       );
     },
 
@@ -523,4 +740,12 @@ APP.crearFlujoCheckin = function () {
       emitir();
     }
   };
+
+  /* Cambiar la declaracion despues de haber pagado invalida ese pago: el monto
+     ya no es el mismo. */
+  function invalidarPago() {
+    if (estado.pago.estado === 'pagado') estado.pago.estado = 'pendiente';
+  }
+
+  return api;
 };
