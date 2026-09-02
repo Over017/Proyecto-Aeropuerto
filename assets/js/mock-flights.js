@@ -22,26 +22,6 @@ window.APP = window.APP || {};
 APP.datos = (function () {
   'use strict';
 
-  // Nombres de ciudad por codigo IATA: se usan como texto secundario en la fila.
-  var AEROPUERTOS = {
-    SCL: 'Santiago',
-    ANF: 'Antofagasta',
-    CJC: 'Calama',
-    IQQ: 'Iquique',
-    LSC: 'La Serena',
-    CCP: 'Concepcion',
-    ZCO: 'Temuco',
-    PMC: 'Puerto Montt',
-    PUQ: 'Punta Arenas',
-    IPC: 'Isla de Pascua',
-    LIM: 'Lima',
-    EZE: 'Buenos Aires',
-    MVD: 'Montevideo',
-    GRU: 'Sao Paulo',
-    BOG: 'Bogota',
-    ASU: 'Asuncion'
-  };
-
   // Hora en que arranca el dia simulado. Los vuelos se reparten alrededor de
   // esta hora para que en la demo haya vuelos en todos los estados desde el
   // primer segundo (algunos ya aterrizados, otros embarcando, otros por salir).
@@ -71,9 +51,9 @@ APP.datos = (function () {
   return {
     HORA_INICIO: HORA_INICIO,
 
-    /** Nombre de ciudad para un codigo IATA (si no existe, devuelve el codigo). */
+    /** Atajo al catalogo compartido de aeropuertos (ver core.js). */
     ciudad: function (iata) {
-      return AEROPUERTOS[iata] || iata;
+      return APP.aeropuertos.ciudad(iata);
     },
 
     /**

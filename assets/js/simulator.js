@@ -12,6 +12,7 @@
    el profesor confirme los tiempos reales de la operacion.
    ========================================================================= */
 
+// Los helpers de tiempo viven en core.js (los comparte con el check-in).
 window.APP = window.APP || {};
 
 APP.ESTADOS = {
@@ -21,25 +22,6 @@ APP.ESTADOS = {
   ATERRIZADO: 'Aterrizado',
   CANCELADO: 'Cancelado',
   ATRASADO: 'Atrasado' // etiqueta visual, no un paso del ciclo
-};
-
-/* ---------- Helpers de tiempo ---------- */
-APP.tiempo = {
-  MINUTO: 60 * 1000,
-
-  /** "HH:MM" -> timestamp del dia indicado. */
-  desdeHoraTexto: function (dia, texto) {
-    var partes = texto.split(':');
-    var d = new Date(dia);
-    d.setHours(Number(partes[0]), Number(partes[1]), 0, 0);
-    return d.getTime();
-  },
-
-  /** timestamp -> "HH:MM" en 24 horas. */
-  aTexto: function (ts) {
-    var d = new Date(ts);
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  }
 };
 
 APP.crearSimulador = function (opciones) {

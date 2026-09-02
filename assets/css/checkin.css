@@ -1,0 +1,1158 @@
+/* =========================================================================
+   AeroAndes - Portal de check-in
+   -------------------------------------------------------------------------
+   Extiende styles.css: usa sus mismos tokens de color, tipografia y radios.
+   Aca solo vive lo propio del flujo de check-in.
+
+   Criterio de animacion: todo es corto (200-500 ms) y sirve para explicar un
+   cambio, nunca para lucirse. Las tres unicas ideas son:
+     1. el panel del paso nuevo entra desde el lado hacia el que se avanza,
+     2. un valor que cambia destella una vez,
+     3. las esperas simuladas tienen un giro y un check al terminar.
+   ========================================================================= */
+
+.app--checkin {
+  max-width: 720px;
+  padding-top: 32px;
+}
+
+/* ---------- Barra de progreso ---------- */
+.progreso {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 36px;
+  padding: 0;
+  list-style: none;
+}
+
+.progreso__paso {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--texto-3);
+  transition: color var(--transicion);
+}
+
+/* La linea de cada paso es el indicador: se pinta cuando el paso se alcanza */
+.progreso__punto {
+  display: block;
+  height: 3px;
+  border-radius: 100px;
+  background: var(--superficie-2);
+  transform-origin: left center;
+  transition: background var(--transicion);
+}
+
+.progreso__paso--hecho .progreso__punto { background: var(--acento); }
+
+.progreso__paso--activo .progreso__punto {
+  background: var(--acento);
+  animation: progreso-avanza 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.progreso__paso--activo,
+.progreso__paso--hecho { color: var(--texto-2); }
+
+.progreso__paso--activo { color: var(--texto); font-weight: 500; }
+
+@keyframes progreso-avanza {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ---------- Panel del paso ---------- */
+.panel {
+  display: block;
+}
+
+/* El panel entra desde el lado hacia el que se avanza: da la sensacion de
+   estar recorriendo una secuencia y no de saltar entre pantallas sueltas. */
+.panel--entra      { animation: entra-adelante 320ms cubic-bezier(0.32, 0.72, 0, 1); }
+.panel--entra-atras { animation: entra-atras 320ms cubic-bezier(0.32, 0.72, 0, 1); }
+
+@keyframes entra-adelante {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes entra-atras {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Mientras corre una espera simulada el panel no acepta clics */
+.panel--bloqueado {
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity var(--transicion);
+}
+
+.panel__encabezado { margin-bottom: 28px; }
+
+.panel__titulo {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.panel__bajada {
+  margin: 8px 0 0;
+  color: var(--texto-2);
+  font-size: 16px;
+}
+
+/* ---------- Bloques y titulos internos ---------- */
+.bloque { margin-bottom: 32px; }
+
+.bloque__titulo {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.bloque__bajada {
+  margin: 0 0 16px;
+  color: var(--texto-2);
+  font-size: 14px;
+}
+
+/* ---------- Formulario ---------- */
+.formulario { margin-bottom: 28px; }
+
+.campo { display: block; margin-bottom: 20px; }
+
+.campo__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto-2);
+}
+
+.campo__input {
+  width: 100%;
+  border: 0;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  outline: none;
+  transition: box-shadow var(--transicion);
+}
+
+.campo__input::placeholder { color: var(--texto-3); }
+
+.campo__input:focus { box-shadow: var(--sombra), 0 0 0 3px var(--acento-suave); }
+
+/* El codigo de reserva se lee mejor separado y en mayusculas */
+.campo__input--codigo {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.campo__input--error { box-shadow: var(--sombra), 0 0 0 3px var(--alerta-suave); }
+
+.campo__ayuda {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+/* ---------- Alertas ---------- */
+.alerta {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border-radius: var(--radio-sm);
+  font-size: 14px;
+  animation: aparece 260ms ease-out;
+}
+
+.alerta p { margin: 0 0 6px; }
+.alerta p:last-child { margin-bottom: 0; }
+
+.alerta--error { background: var(--alerta-suave); color: var(--alerta); }
+
+.alerta__accion { margin-top: 10px; }
+
+@keyframes aparece {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Avisos (informativos, no errores) ---------- */
+.aviso {
+  padding: 18px 20px;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  margin-bottom: 16px;
+}
+
+.aviso__titulo {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.aviso__texto {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+  color: var(--texto-2);
+}
+
+.aviso__texto:last-child { margin-bottom: 0; }
+
+.aviso--info { border-left: 3px solid var(--acento); }
+.aviso--ok   { border-left: 3px solid var(--acento); }
+.aviso--alerta { border-left: 3px solid var(--alerta); }
+
+/* ---------- Listas ---------- */
+.lista-simple,
+.lista-check {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  font-size: 14.5px;
+  color: var(--texto-2);
+}
+
+.lista-simple li,
+.lista-check li {
+  padding: 9px 0;
+  border-top: 1px solid var(--linea);
+}
+
+.lista-simple li:first-child,
+.lista-check li:first-child { border-top: 0; }
+
+.lista-check li { padding-left: 26px; position: relative; }
+
+.lista-check li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 15px;
+  width: 10px;
+  height: 5px;
+  border-left: 2px solid var(--acento);
+  border-bottom: 2px solid var(--acento);
+  transform: rotate(-45deg);
+}
+
+/* ---------- Ayuda de la demo ---------- */
+.demo {
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: var(--superficie-2);
+  border-radius: var(--radio-sm);
+}
+
+.demo__titulo {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--texto-2);
+  cursor: pointer;
+}
+
+.demo__texto {
+  margin: 12px 0;
+  font-size: 13px;
+  color: var(--texto-3);
+}
+
+.demo__lista { margin: 0; padding: 0; list-style: none; }
+
+.ejemplo {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font-family: inherit;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--transicion);
+}
+
+.ejemplo:hover { background: var(--superficie); }
+
+.ejemplo__codigo {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.ejemplo__detalle {
+  display: block;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+/* ---------- Tarjeta de vuelo ---------- */
+.tarjeta {
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.tarjeta__fila {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tarjeta__pill {
+  background: var(--acento-suave);
+  color: var(--acento);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* ---------- Tramo origen -> destino ---------- */
+.tramo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.tramo__punta { display: flex; flex-direction: column; }
+
+.tramo__punta--fin { text-align: right; }
+
+.tramo__iata {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tramo__ciudad {
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+.tramo__hora {
+  margin-top: 4px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-2);
+}
+
+/* Linea con el avioncito: es el unico adorno del flujo */
+.tramo__linea {
+  flex: 1;
+  height: 1px;
+  background: var(--linea);
+  position: relative;
+}
+
+.tramo__linea span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--acento);
+}
+
+/* ---------- Rejilla de datos ---------- */
+.datos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--linea);
+}
+
+.dato__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.dato__valor {
+  display: block;
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dato__valor--fuerte {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.dato__nota {
+  display: block;
+  font-size: 12.5px;
+  color: var(--texto-3);
+  font-weight: 400;
+}
+
+/* ---------- Opciones (casillas) ---------- */
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  transition: background var(--transicion);
+}
+
+.opcion input { margin-top: 3px; accent-color: var(--acento); width: 17px; height: 17px; }
+
+.opcion__titulo { display: block; font-size: 14.5px; font-weight: 500; }
+
+.opcion__nota {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+/* El interruptor de demo se distingue del resto: no es una opcion del producto */
+.opcion--demo {
+  margin-top: 20px;
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--linea);
+}
+
+/* ---------- Medidor de equipaje de mano ---------- */
+.medidor {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 22px;
+  /* Deja aire para la cota de alto, que se dibuja fuera de la caja */
+  padding-left: 24px;
+}
+
+/* Caja en proporcion 55 x 35, el gabinete del mostrador en version dibujo */
+.medidor__caja {
+  position: relative;
+  flex: none;
+  width: 84px;
+  height: 108px;
+  border: 2px solid var(--linea);
+  border-radius: 6px;
+  background: var(--superficie-2);
+}
+
+.medidor__cota {
+  position: absolute;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--texto-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.medidor__cota--alto  { left: -22px; top: 50%; transform: translateY(-50%); }
+.medidor__cota--ancho { bottom: -18px; left: 50%; transform: translateX(-50%); }
+.medidor__cota--fondo { top: -16px; right: 0; }
+
+.medidor__texto {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--texto-2);
+}
+
+/* ---------- Contador de piezas ---------- */
+.contador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  margin-bottom: 12px;
+}
+
+.contador__label { font-size: 14.5px; }
+
+.contador__controles { display: flex; align-items: center; gap: 6px; }
+
+.contador__valor {
+  min-width: 32px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.paso {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--superficie-2);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transicion), transform var(--transicion);
+}
+
+.paso:hover:not(:disabled) { background: var(--linea); }
+.paso:active:not(:disabled) { transform: scale(0.92); }
+.paso:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------- Maletas despachadas ---------- */
+.maletas { margin-bottom: 12px; }
+
+.maleta {
+  padding: 16px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  margin-bottom: 10px;
+  animation: aparece 260ms ease-out;
+}
+
+.maleta__cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.maleta__nombre { font-size: 14.5px; font-weight: 500; }
+
+.maleta__tipo {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--texto-3);
+}
+
+.quitar {
+  border: 0;
+  background: transparent;
+  color: var(--texto-2);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transicion), color var(--transicion);
+}
+
+.quitar:hover { background: var(--alerta-suave); color: var(--alerta); }
+
+.maleta__peso {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.maleta__kg {
+  min-width: 74px;
+  text-align: right;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transicion);
+}
+
+.maleta__kg--alerta { color: var(--alerta); }
+
+.maleta__estado {
+  display: block;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+.maleta__estado--alerta { color: var(--alerta); }
+
+/* Slider: en el totem se maneja con el dedo, por eso el pulgar es grande */
+.rango {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 100px;
+  background: var(--superficie-2);
+  outline: none;
+}
+
+.rango::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--superficie);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  transition: transform var(--transicion);
+}
+
+.rango::-webkit-slider-thumb:active { transform: scale(1.12); cursor: grabbing; }
+
+.rango::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--superficie);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+}
+
+.rango:focus-visible { box-shadow: 0 0 0 3px var(--acento-suave); }
+
+/* ---------- Resumen de cargos ---------- */
+.resumen {
+  padding: 20px 22px;
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  margin-bottom: 24px;
+}
+
+.resumen--plano {
+  background: transparent;
+  box-shadow: none;
+  padding: 0 0 8px;
+}
+
+.resumen__linea {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--linea);
+  font-size: 14.5px;
+}
+
+.resumen__linea:first-child { border-top: 0; }
+
+.resumen__nota {
+  display: block;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+.resumen__monto { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.resumen__vacio {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--texto-2);
+}
+
+.resumen__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--linea);
+  font-size: 15px;
+}
+
+.resumen__total strong {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen__total--cobro { color: var(--alerta); }
+
+/* Destello de un valor que acaba de cambiar: mismo recurso que el tablero */
+.destella { animation: destella-valor 900ms ease-out; }
+
+@keyframes destella-valor {
+  0%   { opacity: 0.35; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Monto a pagar ---------- */
+.monto {
+  text-align: center;
+  padding: 28px 0 24px;
+}
+
+.monto__label {
+  display: block;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+.monto__valor {
+  display: block;
+  margin-top: 4px;
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Medios de pago ---------- */
+.medios { display: flex; flex-direction: column; gap: 10px; }
+
+.medio {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 16px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  transition: box-shadow var(--transicion);
+}
+
+.medio input { margin-top: 2px; accent-color: var(--acento); width: 17px; height: 17px; }
+
+.medio:has(input:checked) { box-shadow: var(--sombra), 0 0 0 2px var(--acento); }
+
+.medio__nombre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.medio__tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--acento);
+  background: var(--acento-suave);
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+
+.medio__detalle {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+
+/* ---------- Check de exito ---------- */
+.exito {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0;
+  animation: aparece 300ms ease-out;
+}
+
+.exito--grande {
+  flex-direction: column;
+  text-align: center;
+  gap: 6px;
+  margin: 12px 0 36px;
+}
+
+.exito__texto { margin: 0; font-size: 15px; font-weight: 500; }
+
+.exito__check svg { width: 46px; height: 46px; display: block; }
+
+.exito__check--chico svg { width: 28px; height: 28px; }
+
+/* El check se dibuja: primero el circulo, despues el visto */
+.exito__check circle {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 2;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: traza-circulo 460ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.exito__check path {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: traza-check 320ms 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes traza-circulo { to { stroke-dashoffset: 0; } }
+@keyframes traza-check   { to { stroke-dashoffset: 0; } }
+
+/* ---------- Eleccion si / no ---------- */
+.eleccion { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+.eleccion__btn {
+  flex: 1 1 200px;
+  border: 0;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  transition: box-shadow var(--transicion), transform var(--transicion);
+}
+
+.eleccion__btn:active { transform: scale(0.985); }
+
+.eleccion__btn--activa {
+  box-shadow: var(--sombra), 0 0 0 2px var(--acento);
+  color: var(--acento);
+}
+
+/* ---------- Adjunto de la autorizacion ---------- */
+.adjunto { margin-bottom: 14px; }
+
+.adjunto--listo {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+}
+
+.adjunto--listo > div { flex: 1; }
+
+.btn--archivo { display: inline-flex; }
+
+.adjunto__nombre {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.adjunto__nota {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+.adjunto__salida {
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  color: var(--texto-2);
+}
+
+/* ---------- Pase de abordar ---------- */
+.pase {
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  margin-bottom: 32px;
+  animation: entra-pase 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes entra-pase {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pase__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--acento);
+  color: #fff;
+}
+
+.pase__marca { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+
+.pase__tipo { font-size: 12px; opacity: 0.85; }
+
+.pase__cuerpo { padding: 24px; }
+
+.pase__pasajero { margin-bottom: 4px; }
+
+.pase__nombre {
+  display: block;
+  margin-top: 3px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.datos--pase { grid-template-columns: repeat(4, 1fr); }
+
+/* El troquel del pase: dos muescas y una linea de puntos */
+.pase__pie {
+  position: relative;
+  padding: 22px 24px 24px;
+  border-top: 1px dashed var(--linea);
+  text-align: center;
+}
+
+.pase__pie::before,
+.pase__pie::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.pase__pie::before { left: -9px; }
+.pase__pie::after  { right: -9px; }
+
+.pase__codigo {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--texto-3);
+  letter-spacing: 0.06em;
+}
+
+/* Barras decorativas: no codifican nada, solo dan la lectura de "pase" */
+.barras {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  height: 44px;
+}
+
+.barras i {
+  display: block;
+  height: 100%;
+  background: var(--texto);
+  opacity: 0.85;
+}
+
+/* ---------- Etiquetas de equipaje ---------- */
+.etiquetas { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+.etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  background: var(--superficie);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+}
+
+.etiqueta__destino {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.etiqueta__datos { flex: 1; }
+
+.etiqueta__numero {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.etiqueta__nota {
+  display: block;
+  font-size: 12.5px;
+  color: var(--texto-3);
+}
+
+.etiqueta .barras { height: 28px; width: 90px; justify-content: flex-end; }
+
+/* ---------- Desvio a mostrador ---------- */
+.desvio {
+  text-align: center;
+  padding: 20px 0 28px;
+  animation: aparece 320ms ease-out;
+}
+
+.desvio__icono svg {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+}
+
+.desvio__icono circle {
+  fill: none;
+  stroke: var(--alerta);
+  stroke-width: 2;
+  opacity: 0.4;
+}
+
+.desvio__icono path {
+  fill: none;
+  stroke: var(--alerta);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+/* ---------- Acciones ---------- */
+.acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+}
+
+.acciones--sola { justify-content: stretch; }
+.acciones--sola .btn { flex: 1; }
+
+/* El boton principal siempre queda a la derecha, aunque no haya "Atras" */
+.acciones .btn--principal { margin-left: auto; }
+.acciones--sola .btn--principal { margin-left: 0; }
+
+/* ---------- Aviso de simulacion ---------- */
+.simulacion {
+  margin: 28px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+/* ---------- Capa de espera ---------- */
+.espera {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: aparece 200ms ease-out;
+}
+
+.espera__caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.espera__giro {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--linea);
+  border-top-color: var(--acento);
+  animation: gira 700ms linear infinite;
+}
+
+@keyframes gira { to { transform: rotate(360deg); } }
+
+.espera__texto {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--texto-2);
+}
+
+/* =========================================================================
+   MODO TOTEM
+   Misma pagina, todo mas grande: es lo que permite servir al pasajero en su
+   celular y en la pantalla del aeropuerto sin mantener dos front-ends.
+   ========================================================================= */
+body.modo-totem { font-size: 17px; }
+
+body.modo-totem .app--checkin { max-width: 880px; padding-top: 48px; }
+body.modo-totem .panel__titulo { font-size: 40px; }
+body.modo-totem .panel__bajada { font-size: 19px; }
+body.modo-totem .bloque__titulo { font-size: 20px; }
+body.modo-totem .campo__input { font-size: 19px; padding: 18px 20px; }
+body.modo-totem .btn { font-size: 18px; padding: 16px 30px; }
+body.modo-totem .paso { width: 44px; height: 44px; font-size: 21px; }
+body.modo-totem .monto__valor { font-size: 56px; }
+body.modo-totem .tramo__iata { font-size: 38px; }
+body.modo-totem .progreso__paso { font-size: 14px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .app--checkin { padding-top: 24px; }
+
+  .panel__titulo { font-size: 25px; }
+  .panel__bajada { font-size: 15px; }
+
+  .datos,
+  .datos--pase { grid-template-columns: repeat(2, 1fr); }
+
+  .tramo__iata { font-size: 25px; }
+  .monto__valor { font-size: 36px; }
+
+  /* En el celular los botones ocupan el ancho: son objetivos tactiles */
+  .acciones { flex-direction: column-reverse; align-items: stretch; }
+  .acciones .btn { width: 100%; margin-left: 0; }
+
+  .medidor { gap: 16px; }
+  .etiqueta .barras { display: none; }
+
+  /* La barra de progreso deja solo las lineas: los rotulos no caben */
+  .progreso__texto { display: none; }
+  .progreso__paso--activo .progreso__texto { display: block; }
+}
+
+/* ---------- Impresion del pase ---------- */
+@media print {
+  .nav,
+  .progreso,
+  .acciones,
+  .pie,
+  .simulacion { display: none !important; }
+
+  .app--checkin { padding: 0; }
+  .pase,
+  .etiqueta { box-shadow: none; border: 1px solid #ccc; }
+}
+
+/* =========================================================================
+   MENOS MOVIMIENTO
+   styles.css ya apaga todas las animaciones cuando el sistema lo pide. El
+   check de exito se dibuja con la animacion, asi que sin ella hay que dejarlo
+   en su estado final o no se veria nunca.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .exito__check circle,
+  .exito__check path { stroke-dashoffset: 0; }
+}

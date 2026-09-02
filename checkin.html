@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AeroAndes · Check-in en línea</title>
+  <meta name="description" content="Flujo de check-in de autoservicio (simulación con datos ficticios)." />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/checkin.css" />
+</head>
+<body>
+  <!--
+    ESTRUCTURA DE LA PANTALLA
+    1. nav       → navegacion comun del sitio + interruptor de modo totem
+    2. progreso  → en que paso va el pasajero
+    3. escenario → aca se monta el panel del paso actual (assets/js/checkin-ui.js)
+    4. espera    → capa de "procesando" para las esperas simuladas
+
+    El contenido de cada paso no esta en este HTML a proposito: el flujo decide
+    que pantalla corresponde y checkin-ui.js la construye.
+  -->
+  <nav class="nav">
+    <a class="nav__marca" href="index.html">AeroAndes</a>
+    <div class="nav__links">
+      <a href="checkin.html" aria-current="page">Check-in</a>
+      <a href="operaciones.html">Panel operacional</a>
+      <button class="nav__totem" id="btn-totem" type="button" aria-pressed="false">Modo tótem</button>
+    </div>
+  </nav>
+
+  <div class="app app--checkin">
+
+    <ol class="progreso" id="progreso" aria-label="Progreso del check-in"></ol>
+
+    <main class="escenario" id="escenario" aria-live="polite"></main>
+
+    <footer class="pie">
+      <p>Simulación con datos ficticios · Caso 12 — Portal de check-in de AeroAndes</p>
+    </footer>
+
+  </div>
+
+  <!-- Capa de espera: cubre la pantalla mientras corre una demora simulada -->
+  <div class="espera" id="espera" role="status" aria-live="assertive" hidden>
+    <div class="espera__caja">
+      <span class="espera__giro" aria-hidden="true"></span>
+      <p class="espera__texto" id="espera-texto"></p>
+    </div>
+  </div>
+
+  <!-- Orden de carga: nucleo compartido → datos → flujo → render → arranque -->
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/checkin-mock.js"></script>
+  <script src="assets/js/checkin-flow.js"></script>
+  <script src="assets/js/checkin-ui.js"></script>
+  <script src="assets/js/checkin-main.js"></script>
+</body>
+</html>

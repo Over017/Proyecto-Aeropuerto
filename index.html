@@ -3,92 +3,122 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AeroAndes · Panel Operacional</title>
-  <meta name="description" content="Maqueta del panel operacional de vuelos (datos simulados)." />
+  <title>AeroAndes · Portal del pasajero</title>
+  <meta name="description" content="Maqueta del portal de pasajeros de AeroAndes: check-in en línea simulado (datos ficticios)." />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
   <!--
-    ESTRUCTURA DE LA PANTALLA
-    1. header  → identidad + reloj simulado + control de velocidad de la demo
-    2. kpis    → resumen del estado de la operación
-    3. filtros → búsqueda + chips por estado
-    4. tablero → listado de vuelos (se renderiza desde JS, ver assets/js/ui.js)
+    La navegacion es la misma en las tres paginas del sitio. Se repite en el
+    HTML a proposito: sin build ni framework, un include obligaria a montarla
+    desde JS y a que el menu apareciera despues del primer pintado.
   -->
-  <div class="app">
+  <nav class="nav">
+    <a class="nav__marca" href="index.html" aria-current="page">AeroAndes</a>
+    <div class="nav__links">
+      <a href="checkin.html">Check-in</a>
+      <a href="operaciones.html">Panel operacional</a>
+    </div>
+  </nav>
 
-    <header class="header">
-      <div class="header__marca">
-        <h1 class="header__titulo">Panel Operacional</h1>
-        <p class="header__sub">AeroAndes · Vuelos del día</p>
-      </div>
+  <div class="app app--portada">
 
-      <div class="header__reloj">
-        <div class="reloj">
-          <span class="reloj__hora" id="reloj-hora">--:--</span>
-          <span class="reloj__etiqueta">hora simulada</span>
-        </div>
-        <!-- Control solo para la demo: acelera el tiempo para que los estados cambien en vivo -->
-        <div class="velocidad" role="group" aria-label="Velocidad de la simulación">
-          <button class="velocidad__btn" data-velocidad="1">1×</button>
-          <button class="velocidad__btn" data-velocidad="60">60×</button>
-          <button class="velocidad__btn" data-velocidad="300">300×</button>
-        </div>
+    <header class="hero">
+      <!-- El espacio a cada lado del salto importa: en movil el <br> se oculta
+           y sin el las dos palabras quedarian pegadas. -->
+      <h1 class="hero__titulo">Tu check-in, resuelto <br /> antes de llegar al aeropuerto.</h1>
+      <p class="hero__bajada">
+        Identifícate, declara tu equipaje y paga el exceso desde tu celular o desde un
+        tótem. Al aeropuerto llegas solo a dejar las maletas.
+      </p>
+      <div class="hero__acciones">
+        <a class="btn btn--principal btn--grande" href="checkin.html">Iniciar check-in</a>
+        <a class="btn btn--plano btn--grande" href="checkin.html?totem=1">Abrir en modo tótem</a>
       </div>
     </header>
 
-    <section class="kpis" aria-label="Resumen de la operación">
-      <div class="kpi">
-        <span class="kpi__valor" id="kpi-total">0</span>
-        <span class="kpi__label">Vuelos</span>
+    <!-- Los tres pasos que despues recorre checkin.html, en el mismo orden -->
+    <section class="pasos" aria-label="Cómo funciona">
+      <article class="pasos__item">
+        <span class="pasos__numero">1</span>
+        <h2 class="pasos__titulo">Identifícate</h2>
+        <p class="pasos__texto">
+          Con tu código de reserva y tu documento. Sin fila y sin que nadie tenga que
+          revisar cédula por cédula en el mostrador.
+        </p>
+      </article>
+      <article class="pasos__item">
+        <span class="pasos__numero">2</span>
+        <h2 class="pasos__titulo">Declara tu equipaje</h2>
+        <p class="pasos__texto">
+          Cuántas piezas llevas y cuánto pesan. Si hay exceso, lo pagas en la misma
+          pantalla con tu cuenta vinculada: sin efectivo ni tarjeta en la mano.
+        </p>
+      </article>
+      <article class="pasos__item">
+        <span class="pasos__numero">3</span>
+        <h2 class="pasos__titulo">Recibe tu pase</h2>
+        <p class="pasos__texto">
+          Pase de abordar y etiquetas de equipaje listos. En el aeropuerto solo pasas
+          por el punto de entrega de maletas.
+        </p>
+      </article>
+    </section>
+
+    <!-- Los limites se escriben desde CONFIG (assets/js/checkin-mock.js) para
+         que la portada nunca contradiga lo que aplica el flujo. -->
+    <section class="franjas" aria-label="Equipaje">
+      <div class="franja">
+        <span class="franja__label">Equipaje de mano</span>
+        <span class="franja__valor" data-config="MANO_MEDIDAS_CM">--</span>
+        <span class="franja__nota">cm · hasta <span data-config="MANO_PESO_MAX_KG">--</span> kg</span>
       </div>
-      <div class="kpi">
-        <span class="kpi__valor" id="kpi-aire">0</span>
-        <span class="kpi__label">En camino</span>
+      <div class="franja">
+        <span class="franja__label">Maleta despachada</span>
+        <span class="franja__valor"><span data-config="DESPACHADA_PESO_MAX_KG">--</span> kg</span>
+        <span class="franja__nota">tope por pieza: <span data-config="DESPACHADA_PESO_TOPE_KG">--</span> kg</span>
       </div>
-      <div class="kpi">
-        <span class="kpi__valor kpi__valor--alerta" id="kpi-atrasados">0</span>
-        <span class="kpi__label">Atrasados</span>
+      <div class="franja">
+        <span class="franja__label">Exceso de peso</span>
+        <span class="franja__valor" data-config-pesos="TARIFA_EXCESO_KG">--</span>
+        <span class="franja__nota">por kilo adicional</span>
       </div>
-      <div class="kpi">
-        <span class="kpi__valor" id="kpi-cancelados">0</span>
-        <span class="kpi__label">Cancelados</span>
+      <div class="franja">
+        <span class="franja__label">Check-in en línea</span>
+        <span class="franja__valor"><span data-config-horas="APERTURA_CHECKIN_MIN">--</span> h antes</span>
+        <span class="franja__nota">cierra <span data-config="CIERRE_CHECKIN_MIN">--</span> min antes de la salida</span>
       </div>
     </section>
 
-    <section class="controles">
-      <input
-        class="buscador"
-        id="buscador"
-        type="search"
-        placeholder="Buscar vuelo, origen o destino"
-        aria-label="Buscar vuelo, origen o destino" />
-      <div class="chips" id="chips" role="group" aria-label="Filtrar por estado"></div>
+    <section class="contexto">
+      <h2 class="contexto__titulo">Por qué existe este portal</h2>
+      <p class="contexto__texto">
+        Hoy la aglomeración en el check-in nace de dos procesos que se hacen uno por uno
+        en el mostrador: validar la identidad de cada pasajero y resolver el equipaje
+        —medirlo, pesarlo y cobrar el exceso, muchas veces con el pasajero buscando
+        efectivo o su tarjeta. Este portal mueve ambos momentos antes del aeropuerto,
+        para que el mostrador quede solo para los casos que de verdad necesitan a una
+        persona.
+      </p>
+      <p class="contexto__texto">
+        El panel operacional que ya usa el equipo de tierra sigue disponible y muestra,
+        en paralelo, cómo avanzan los vuelos del día.
+      </p>
+      <a class="enlace enlace--flecha" href="operaciones.html">Ver el panel operacional</a>
     </section>
-
-    <main class="tablero">
-      <div class="tablero__encabezado" aria-hidden="true">
-        <span>Vuelo</span>
-        <span>Ruta</span>
-        <span>Salida</span>
-        <span>Llegada est.</span>
-        <span>Puerta</span>
-        <span>Estado</span>
-      </div>
-      <div class="tablero__cuerpo" id="lista-vuelos"></div>
-      <p class="tablero__vacio" id="tablero-vacio" hidden>No hay vuelos que coincidan con el filtro.</p>
-    </main>
 
     <footer class="pie">
-      <p>Maqueta con datos simulados · Caso 12 — Gestión operacional de línea aérea</p>
+      <p>
+        Maqueta con datos simulados · Caso 12 — Gestión operacional de línea aérea.
+        Todos los datos son ficticios: no hay pagos, ni validación real de identidad,
+        ni conexión con ningún servicio externo.
+      </p>
     </footer>
 
   </div>
 
-  <!-- Orden de carga: datos → lógica de simulación → render → arranque -->
-  <script src="assets/js/mock-flights.js"></script>
-  <script src="assets/js/simulator.js"></script>
-  <script src="assets/js/ui.js"></script>
-  <script src="assets/js/main.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/checkin-mock.js"></script>
+  <script src="assets/js/home.js"></script>
 </body>
 </html>
